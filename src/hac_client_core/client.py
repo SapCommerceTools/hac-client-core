@@ -269,9 +269,20 @@ class HacClient:
             response = self.http_session.get(login_url, timeout=self.timeout)
             response.raise_for_status()
             
+            if not self.quiet:
+                print(f"Login page response status: {response.status_code}", file=__import__('sys').stderr)
+                print(f"Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
+                if hasattr(response.raw, 'headers'):
+                    print(f"All Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
+            
             csrf_token = self._extract_csrf_token(response.text)
             session_id = self._extract_session_cookie(response)
             route_cookie = self._extract_route_cookie(response)
+            
+            if not self.quiet:
+                print(f"Extracted session_id: {session_id}", file=__import__('sys').stderr)
+                print(f"Extracted csrf_token: {csrf_token[:20] if csrf_token else None}...", file=__import__('sys').stderr)
+                print(f"Extracted route_cookie: {route_cookie}", file=__import__('sys').stderr)
             
             if not csrf_token:
                 raise HacAuthenticationError("Could not extract CSRF token from login page")
