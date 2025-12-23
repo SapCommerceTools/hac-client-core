@@ -380,12 +380,13 @@ class HacClient:
             
             data = {
                 'script': script,
-                'commit': 'true' if commit else 'false',
-                '_csrf': self.session_info.csrf_token
+                'scriptType': 'groovy',
+                'commit': 'true' if commit else 'false'
             }
             
             headers = {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
                 'X-Requested-With': 'XMLHttpRequest'
             }
             
