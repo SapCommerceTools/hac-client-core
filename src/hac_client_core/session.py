@@ -23,7 +23,7 @@ class SessionMetadata:
     """ROUTE cookie for load balancer affinity"""
     
     environment: str
-    """Environment name"""
+    """Environment identifier (environment or environment/endpoint)"""
     
     base_url: str
     """HAC base URL"""
@@ -76,7 +76,10 @@ class SessionManager:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
     
     def _get_session_key(self, base_url: str, username: str, environment: str) -> str:
-        """Generate unique key for session."""
+        """Generate unique key for session.
+        
+        Note: environment can be just 'env' or 'env/endpoint' for composite keys.
+        """
         key_str = f"{base_url}:{username}:{environment}"
         return hashlib.md5(key_str.encode()).hexdigest()
     
@@ -91,7 +94,7 @@ class SessionManager:
         Args:
             base_url: HAC base URL
             username: Username
-            environment: Environment name
+            environment: Environment identifier (e.g., 'local' or 'local/hac')
             
         Returns:
             SessionMetadata if cached session exists, None otherwise
@@ -124,7 +127,7 @@ class SessionManager:
         Args:
             base_url: HAC base URL
             username: Username
-            environment: Environment name
+            environment: Environment identifier (e.g., 'local' or 'local/hac')
             session_id: Session ID
             csrf_token: CSRF token
             route_cookie: Optional ROUTE cookie
@@ -160,7 +163,7 @@ class SessionManager:
         Args:
             base_url: HAC base URL
             username: Username
-            environment: Environment name
+            environment: Environment identifier (e.g., 'local' or 'local/hac')
         """
         session_file = self._get_session_file(base_url, username, environment)
         session_file.unlink(missing_ok=True)
