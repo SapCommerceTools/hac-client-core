@@ -277,8 +277,10 @@ class HacClient:
                 print(f"Session cookies after GET: {dict(self.http_session.cookies)}", file=__import__('sys').stderr)
             
             csrf_token = self._extract_csrf_token(response.text)
-            session_id = self._extract_session_cookie(response)
-            route_cookie = self._extract_route_cookie(response)
+            # Extract from the session cookies (requests.Session stores them automatically)
+            session_id = self.http_session.cookies.get('JSESSIONID')
+            route = self.http_session.cookies.get('ROUTE')
+            route_cookie = f"ROUTE={route}" if route else None
             
             if not self.quiet:
                 print(f"Extracted session_id: {session_id}", file=__import__('sys').stderr)
@@ -322,14 +324,14 @@ class HacClient:
                 raise HacAuthenticationError("Authentication failed - invalid credentials")
             
             # Extract session info from auth response
-            new_session_id = self._extract_session_cookie(response)
-            new_csrf_token = self._extract_csrf_token(response.text)
-            new_route_cookie = self._extract_route_cookie(response)
+            # The session cookies are automatically stored in http_session.cookies
+            session_id = self.http_session.cookies.get('JSESSIONID') or session_id
+            route = self.http_session.cookies.get('ROUTE')
+            route_cookie = f"ROUTE={route}" if route else route_cookie
             
-            # Use new values if available, otherwise keep old ones
-            session_id = new_session_id or session_id
+            # Extract updated CSRF token from authenticated page
+            new_csrf_token = self._extract_csrf_token(response.text)
             csrf_token = new_csrf_token or csrf_token
-            route_cookie = new_route_cookie or route_cookie
             
             if not self.quiet:
                 print(f"After auth - session_id: {session_id}", file=__import__('sys').stderr)
