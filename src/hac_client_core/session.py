@@ -151,6 +151,8 @@ class SessionManager:
         )
         
         try:
+            # Ensure parent directory exists
+            session_file.parent.mkdir(parents=True, exist_ok=True)
             with session_file.open('w') as f:
                 json.dump(asdict(metadata), f, indent=2)
         except (IOError, OSError):
