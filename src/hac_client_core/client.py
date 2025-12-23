@@ -384,10 +384,10 @@ class HacClient:
             }
             
             headers = {
-                'Cookie': self._build_cookie_header(),
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 'X-Requested-With': 'XMLHttpRequest'
             }
+            # Note: Cookies are automatically sent from self.http_session.cookies
             
             response = self.http_session.post(
                 url,
@@ -450,10 +450,10 @@ class HacClient:
             }
             
             headers = {
-                'Cookie': self._build_cookie_header(),
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 'X-Requested-With': 'XMLHttpRequest'
             }
+            # Note: Cookies are automatically sent from self.http_session.cookies
             
             response = self.http_session.post(
                 url,
@@ -510,9 +510,9 @@ class HacClient:
             }
             
             headers = {
-                'Cookie': self._build_cookie_header(),
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
             }
+            # Note: Cookies are automatically sent from self.http_session.cookies
             
             response = self.http_session.post(
                 url,
