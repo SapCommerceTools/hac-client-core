@@ -123,7 +123,7 @@ class HacClient:
         return None
     
     def _extract_session_cookie(self, response: requests.Response) -> Optional[str]:
-        """Extract JSESSIONID from response cookies.
+        """Extract JSESSIONID from Set-Cookie headers.
         
         Args:
             response: HTTP response
@@ -131,7 +131,30 @@ class HacClient:
         Returns:
             Session ID if found, None otherwise
         """
-        return response.cookies.get('JSESSIONID')
+        # First try response.cookies (works for some cases)
+        session_id = response.cookies.get('JSESSIONID')
+        if session_id:
+            return session_id
+        
+        # Fall back to parsing Set-Cookie headers directly
+        # requests.Response.headers is a case-insensitive dict that can have multiple values
+        # for the same header. We need to get all Set-Cookie headers.
+        if 'Set-Cookie' in response.headers:
+            # response.raw.headers.getlist() gives us all Set-Cookie headers
+            if hasattr(response.raw, 'headers'):
+                set_cookie_headers = response.raw.headers.getlist('Set-Cookie')
+            else:
+                # Fallback: response.headers only returns the last value
+                set_cookie_headers = [response.headers['Set-Cookie']]
+            
+            for cookie in set_cookie_headers:
+                if 'JSESSIONID=' in cookie:
+                    # Extract value: "JSESSIONID=abc123; Path=/; ..."
+                    for part in cookie.split(';'):
+                        if 'JSESSIONID=' in part:
+                            return part.split('=', 1)[1].strip()
+        
+        return None
     
     def _extract_route_cookie(self, response: requests.Response) -> Optional[str]:
         """Extract ROUTE cookie for load balancer affinity.
@@ -140,9 +163,28 @@ class HacClient:
             response: HTTP response
             
         Returns:
-            ROUTE cookie if found, None otherwise
+            ROUTE cookie string (e.g., "ROUTE=value") if found, None otherwise
         """
-        return response.cookies.get('ROUTE')
+        # First try response.cookies
+        route = response.cookies.get('ROUTE')
+        if route:
+            return f"ROUTE={route}"
+        
+        # Fall back to parsing Set-Cookie headers directly
+        if 'Set-Cookie' in response.headers:
+            if hasattr(response.raw, 'headers'):
+                set_cookie_headers = response.raw.headers.getlist('Set-Cookie')
+            else:
+                set_cookie_headers = [response.headers['Set-Cookie']]
+            
+            for cookie in set_cookie_headers:
+                if 'ROUTE=' in cookie:
+                    # Extract "ROUTE=value" part (before first semicolon)
+                    for part in cookie.split(';'):
+                        if 'ROUTE=' in part:
+                            return part.strip()
+        
+        return None
     
     def _build_cookie_header(self) -> str:
         """Build cookie header for requests.
