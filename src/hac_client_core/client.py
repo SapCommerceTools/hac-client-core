@@ -407,11 +407,6 @@ class HacClient:
                 headers=headers,
                 timeout=self.timeout
             )
-            
-            if not self.quiet and response.status_code >= 400:
-                print(f"Groovy request failed - status: {response.status_code}", file=__import__('sys').stderr)
-                print(f"Response body: {response.text[:500]}", file=__import__('sys').stderr)
-            
             response.raise_for_status()
             
             result = response.json()
@@ -457,15 +452,14 @@ class HacClient:
                 'flexibleSearchQuery': query,
                 'maxCount': str(max_count),
                 'locale': locale,
-                'commit': 'false',
-                '_csrf': self.session_info.csrf_token
+                'commit': 'false'
             }
             
             headers = {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
                 'X-Requested-With': 'XMLHttpRequest'
             }
-            # Note: Cookies are automatically sent from self.http_session.cookies
             
             response = self.http_session.post(
                 url,
@@ -517,14 +511,13 @@ class HacClient:
                 'validationEnum': validation_mode.upper(),
                 'maxThreads': '1',
                 '_legacyMode': 'on',
-                '_enableCodeExecution': 'on',
-                '_csrf': self.session_info.csrf_token
+                '_enableCodeExecution': 'on'
             }
             
             headers = {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-CSRF-TOKEN': self.session_info.csrf_token
             }
-            # Note: Cookies are automatically sent from self.http_session.cookies
             
             response = self.http_session.post(
                 url,
