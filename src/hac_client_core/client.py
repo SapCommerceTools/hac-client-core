@@ -269,23 +269,11 @@ class HacClient:
             response = self.http_session.get(login_url, timeout=self.timeout)
             response.raise_for_status()
             
-            if not self.quiet:
-                print(f"Login page response status: {response.status_code}", file=__import__('sys').stderr)
-                print(f"Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
-                if hasattr(response.raw, 'headers'):
-                    print(f"All Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
-                print(f"Session cookies after GET: {dict(self.http_session.cookies)}", file=__import__('sys').stderr)
-            
             csrf_token = self._extract_csrf_token(response.text)
             # Extract from the session cookies (requests.Session stores them automatically)
             session_id = self.http_session.cookies.get('JSESSIONID')
             route = self.http_session.cookies.get('ROUTE')
             route_cookie = f"ROUTE={route}" if route else None
-            
-            if not self.quiet:
-                print(f"Extracted session_id: {session_id}", file=__import__('sys').stderr)
-                print(f"Extracted csrf_token: {csrf_token[:20] if csrf_token else None}...", file=__import__('sys').stderr)
-                print(f"Extracted route_cookie: {route_cookie}", file=__import__('sys').stderr)
             
             if not csrf_token:
                 raise HacAuthenticationError("Could not extract CSRF token from login page")
@@ -312,13 +300,6 @@ class HacClient:
                 allow_redirects=True
             )
             
-            if not self.quiet:
-                print(f"Auth POST response status: {response.status_code}", file=__import__('sys').stderr)
-                print(f"Auth POST Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
-                if hasattr(response.raw, 'headers'):
-                    print(f"All Auth Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
-                print(f"Session cookies after POST: {dict(self.http_session.cookies)}", file=__import__('sys').stderr)
-            
             # Check if login was successful
             if response.status_code != 200 or 'j_spring_security_check' in response.text:
                 raise HacAuthenticationError("Authentication failed - invalid credentials")
@@ -332,11 +313,6 @@ class HacClient:
             # Extract updated CSRF token from authenticated page
             new_csrf_token = self._extract_csrf_token(response.text)
             csrf_token = new_csrf_token or csrf_token
-            
-            if not self.quiet:
-                print(f"After auth - session_id: {session_id}", file=__import__('sys').stderr)
-                print(f"After auth - csrf_token: {csrf_token[:20] if csrf_token else None}...", file=__import__('sys').stderr)
-                print(f"After auth - route_cookie: {route_cookie}", file=__import__('sys').stderr)
             
             if not session_id or not csrf_token:
                 missing = []
