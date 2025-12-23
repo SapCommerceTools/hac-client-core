@@ -48,11 +48,7 @@ class BasicAuthHandler(AuthHandler):
         self.password = password
     
     def apply_auth(self, request: requests.PreparedRequest) -> requests.PreparedRequest:
-        """Apply HTTP Basic Authentication.
-        
-        This is currently not used for HAC since we use form-based login,
-        but kept for future extensibility.
-        """
+        """Apply HTTP Basic Authentication."""
         return request
     
     def get_initial_credentials(self) -> Dict[str, str]:

@@ -89,7 +89,6 @@ Authentication is applied via request interceptors, keeping the core client auth
 
 ## Design Principles
 
-- **Pure Python**: No CLI concerns, no external tools
 - **Type-safe**: Full type hints
 - **Testable**: Mockable HTTP layer
 - **Extensible**: Pluggable auth, custom interceptors

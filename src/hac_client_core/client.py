@@ -195,13 +195,18 @@ class HacClient:
         """
         # Try to load cached session
         if self.session_manager:
-            cached = self.session_manager.load_session(
+            cached_metadata = self.session_manager.load_session(
                 self.base_url,
                 self.auth_handler.get_initial_credentials()['j_username'],
                 self.environment
             )
-            if cached:
-                self.session_info = cached
+            if cached_metadata:
+                self.session_info = SessionInfo(
+                    session_id=cached_metadata.session_id,
+                    csrf_token=cached_metadata.csrf_token,
+                    route_cookie=cached_metadata.route_cookie,
+                    is_authenticated=cached_metadata.is_authenticated
+                )
                 if self._validate_session():
                     if not self.quiet:
                         print("Using cached session", file=__import__('sys').stderr)
@@ -271,13 +276,15 @@ class HacClient:
                 is_authenticated=True
             )
             
-            # Cache session
+            # Cache session with metadata
             if self.session_manager:
                 self.session_manager.save_session(
                     self.base_url,
                     credentials['j_username'],
                     self.environment,
-                    self.session_info
+                    session_id,
+                    csrf_token,
+                    route_cookie
                 )
             
             if not self.quiet:
