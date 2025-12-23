@@ -37,7 +37,7 @@ class AuthHandler(ABC):
 class BasicAuthHandler(AuthHandler):
     """HTTP Basic Authentication handler.
     
-    Security: Password is cleared from memory after first use.
+    Security: Password reference is cleared from memory when handler is destroyed.
     """
     
     def __init__(self, username: str, password: str):
@@ -49,7 +49,6 @@ class BasicAuthHandler(AuthHandler):
         """
         self.username = username
         self._password = password
-        self._credentials_used = False
     
     def apply_auth(self, request: requests.PreparedRequest) -> requests.PreparedRequest:
         """Apply HTTP Basic Authentication."""
@@ -58,27 +57,16 @@ class BasicAuthHandler(AuthHandler):
     def get_initial_credentials(self) -> Dict[str, str]:
         """Get credentials for Spring Security form login.
         
-        Note: Password is cleared from memory after first call for security.
+        Returns credential dictionary. Can be called multiple times if needed
+        (e.g., retries, multiple authentication attempts).
         """
-        if self._credentials_used:
-            raise RuntimeError("Credentials already used and cleared from memory")
-        
-        credentials = {
+        return {
             'j_username': self.username,
             'j_password': self._password
         }
-        
-        # Clear password from memory immediately after use
-        self._credentials_used = True
-        if self._password:
-            # Attempt to overwrite (limited effectiveness in Python due to string immutability)
-            self._password = None
-            del self._password
-        
-        return credentials
     
     def __del__(self):
-        """Ensure password is cleared on object destruction."""
-        if hasattr(self, '_password') and self._password:
+        """Clear password reference on object destruction."""
+        if hasattr(self, '_password'):
             self._password = None
 
