@@ -198,7 +198,8 @@ class HacClient:
             cookies.append(f"JSESSIONID={self.session_info.session_id}")
         
         if self.session_info and self.session_info.route_cookie:
-            cookies.append(f"ROUTE={self.session_info.route_cookie}")
+            # route_cookie is already in "ROUTE=value" format
+            cookies.append(self.session_info.route_cookie)
         
         return "; ".join(cookies)
     
