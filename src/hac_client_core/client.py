@@ -274,6 +274,7 @@ class HacClient:
                 print(f"Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
                 if hasattr(response.raw, 'headers'):
                     print(f"All Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
+                print(f"Session cookies after GET: {dict(self.http_session.cookies)}", file=__import__('sys').stderr)
             
             csrf_token = self._extract_csrf_token(response.text)
             session_id = self._extract_session_cookie(response)
@@ -314,6 +315,7 @@ class HacClient:
                 print(f"Auth POST Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
                 if hasattr(response.raw, 'headers'):
                     print(f"All Auth Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
+                print(f"Session cookies after POST: {dict(self.http_session.cookies)}", file=__import__('sys').stderr)
             
             # Check if login was successful
             if response.status_code != 200 or 'j_spring_security_check' in response.text:
