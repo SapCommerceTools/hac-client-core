@@ -2,6 +2,20 @@
 
 HTTP client library for SAP Commerce HAC (Hybris Administration Console) API.
 
+## Security
+
+**Credential Handling:**
+- Passwords are cleared from memory immediately after authentication
+- Session tokens are cached securely
+- Support for pluggable authentication methods
+- No passwords stored on disk
+
+**Session Security:**
+- CSRF token validation
+- Session expiration detection
+- Secure session cache in user directory
+- Automatic session invalidation on errors
+
 ## Overview
 
 This library provides programmatic access to core SAP Commerce HAC operations:
