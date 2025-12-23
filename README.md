@@ -1,17 +1,18 @@
 # HAC Client Core
 
-Pure Python HTTP client library for SAP Commerce HAC (Hybris Administration Console) API.
+HTTP client library for SAP Commerce HAC (Hybris Administration Console) API.
 
 ## Overview
 
-This library provides programmatic access to SAP Commerce HAC operations:
+This library provides programmatic access to core SAP Commerce HAC operations:
 
 - **Groovy script execution** with commit mode support
 - **FlexibleSearch queries** with result pagination
 - **Impex import/export** operations
-- **Media management** operations
 - **Session management** with caching and CSRF protection
 - **Pluggable authentication** (Basic Auth, extensible for OAuth, etc.)
+
+Higher-level features like media management and orchestrated operations belong in the administration layer.
 
 ## Features
 
