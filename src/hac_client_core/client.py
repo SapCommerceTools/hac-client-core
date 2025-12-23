@@ -266,7 +266,15 @@ class HacClient:
             route_cookie = self._extract_route_cookie(response) or route_cookie
             
             if not session_id or not csrf_token:
-                raise HacAuthenticationError("Could not establish session")
+                missing = []
+                if not session_id:
+                    missing.append("session_id")
+                if not csrf_token:
+                    missing.append("csrf_token")
+                raise HacAuthenticationError(
+                    f"Could not establish session - missing: {', '.join(missing)}. "
+                    f"Response status: {response.status_code}, URL: {response.url}"
+                )
             
             # Store session info
             self.session_info = SessionInfo(
