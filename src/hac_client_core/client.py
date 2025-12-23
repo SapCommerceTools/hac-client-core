@@ -385,10 +385,20 @@ class HacClient:
             }
             
             headers = {
-                'Cookie': self._build_cookie_header(),
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 'X-Requested-With': 'XMLHttpRequest'
             }
+            
+            # Ensure cookies are set in http_session for automatic inclusion
+            if self.session_info.session_id not in str(self.http_session.cookies):
+                from urllib.parse import urlparse
+                parsed = urlparse(self.base_url)
+                self.http_session.cookies.set('JSESSIONID', self.session_info.session_id, 
+                                             domain=parsed.hostname, path='/')
+                if self.session_info.route_cookie:
+                    route_value = self.session_info.route_cookie.replace('ROUTE=', '')
+                    self.http_session.cookies.set('ROUTE', route_value,
+                                                 domain=parsed.hostname, path='/')
             
             response = self.http_session.post(
                 url,
