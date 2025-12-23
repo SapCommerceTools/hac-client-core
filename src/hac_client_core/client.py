@@ -309,14 +309,30 @@ class HacClient:
                 allow_redirects=True
             )
             
+            if not self.quiet:
+                print(f"Auth POST response status: {response.status_code}", file=__import__('sys').stderr)
+                print(f"Auth POST Set-Cookie headers: {response.headers.get('Set-Cookie', 'None')}", file=__import__('sys').stderr)
+                if hasattr(response.raw, 'headers'):
+                    print(f"All Auth Set-Cookie headers: {response.raw.headers.getlist('Set-Cookie')}", file=__import__('sys').stderr)
+            
             # Check if login was successful
             if response.status_code != 200 or 'j_spring_security_check' in response.text:
                 raise HacAuthenticationError("Authentication failed - invalid credentials")
             
-            # Extract session info
-            session_id = self._extract_session_cookie(response) or session_id
-            csrf_token = self._extract_csrf_token(response.text) or csrf_token
-            route_cookie = self._extract_route_cookie(response) or route_cookie
+            # Extract session info from auth response
+            new_session_id = self._extract_session_cookie(response)
+            new_csrf_token = self._extract_csrf_token(response.text)
+            new_route_cookie = self._extract_route_cookie(response)
+            
+            # Use new values if available, otherwise keep old ones
+            session_id = new_session_id or session_id
+            csrf_token = new_csrf_token or csrf_token
+            route_cookie = new_route_cookie or route_cookie
+            
+            if not self.quiet:
+                print(f"After auth - session_id: {session_id}", file=__import__('sys').stderr)
+                print(f"After auth - csrf_token: {csrf_token[:20] if csrf_token else None}...", file=__import__('sys').stderr)
+                print(f"After auth - route_cookie: {route_cookie}", file=__import__('sys').stderr)
             
             if not session_id or not csrf_token:
                 missing = []
