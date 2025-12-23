@@ -395,6 +395,11 @@ class HacClient:
                 headers=headers,
                 timeout=self.timeout
             )
+            
+            if not self.quiet and response.status_code >= 400:
+                print(f"Groovy request failed - status: {response.status_code}", file=__import__('sys').stderr)
+                print(f"Response body: {response.text[:500]}", file=__import__('sys').stderr)
+            
             response.raise_for_status()
             
             result = response.json()
