@@ -356,6 +356,55 @@ class HacClient:
         if not self.session_info or not self.session_info.is_authenticated:
             self.login()
     
+    def _clear_invalid_session(self) -> None:
+        """Clear invalid/expired session from cache."""
+        if self.session_manager and self.session_info:
+            try:
+                username = self.auth_handler.get_initial_credentials().get('j_username', 'unknown')
+                self.session_manager.remove_session(
+                    self.base_url,
+                    username,
+                    self.environment
+                )
+                self.session_info = None
+            except Exception:
+                # If we can't clear it, just continue
+                pass
+    
+    def _handle_request_error(self, error: requests.RequestException, operation: str) -> None:
+        """Handle request errors and detect authentication failures.
+        
+        Args:
+            error: The request exception
+            operation: Description of the operation that failed
+            
+        Raises:
+            HacAuthenticationError: If authentication failed/expired
+            HacClientError: For other errors
+        """
+        if isinstance(error, requests.HTTPError) and error.response is not None:
+            if error.response.status_code in (401, 403, 405):
+                self._clear_invalid_session()
+                raise HacAuthenticationError(
+                    f"Session expired or invalid (HTTP {error.response.status_code}). "
+                    f"Please run: hac session start {self.environment}"
+                )
+        raise HacClientError(f"{operation}: {error}")
+    
+    def _touch_session(self) -> None:
+        """Update session last_used timestamp after successful operation."""
+        if self.session_manager and self.session_info:
+            try:
+                username = self.auth_handler.get_initial_credentials().get('j_username', 'unknown')
+                self.session_manager.touch_session(
+                    self.base_url,
+                    username,
+                    self.environment
+                )
+            except Exception:
+                # Non-critical, ignore errors
+                pass
+    
     def execute_groovy(
         self,
         script: str,
@@ -411,6 +460,9 @@ class HacClient:
             
             result = response.json()
             
+            # Update session timestamp on successful use
+            self._touch_session()
+            
             return GroovyScriptResult(
                 output_text=result.get('outputText', ''),
                 execution_result=result.get('executionResult', ''),
@@ -420,7 +472,7 @@ class HacClient:
             )
             
         except requests.RequestException as e:
-            raise HacClientError(f"Failed to execute Groovy script: {e}")
+            self._handle_request_error(e, "Failed to execute Groovy script")
         except (KeyError, ValueError) as e:
             raise HacClientError(f"Invalid response from HAC: {e}")
     
@@ -471,6 +523,9 @@ class HacClient:
             
             result = response.json()
             
+            # Update session timestamp on successful use
+            self._touch_session()
+            
             return FlexibleSearchResult(
                 headers=result.get('headers', []),
                 rows=result.get('resultList', []),
@@ -480,7 +535,7 @@ class HacClient:
             )
             
         except requests.RequestException as e:
-            raise HacClientError(f"Failed to execute FlexibleSearch: {e}")
+            self._handle_request_error(e, "Failed to execute FlexibleSearch")
         except (KeyError, ValueError) as e:
             raise HacClientError(f"Invalid response from HAC: {e}")
     
@@ -538,6 +593,9 @@ class HacClient:
                 output = response.text
                 success = response.status_code == 200
             
+            # Update session timestamp on successful use
+            self._touch_session()
+            
             return ImpexResult(
                 success=success,
                 output=output,
@@ -545,5 +603,5 @@ class HacClient:
             )
             
         except requests.RequestException as e:
-            raise HacClientError(f"Failed to import Impex: {e}")
+            self._handle_request_error(e, "Failed to import Impex")
 

@@ -159,6 +159,26 @@ class SessionManager:
             # Ignore errors when saving cache - it's just an optimization
             pass
     
+    def touch_session(self, base_url: str, username: str, environment: str) -> None:
+        """Update last_used timestamp for a session.
+        
+        Args:
+            base_url: HAC base URL
+            username: Username
+            environment: Environment identifier (e.g., 'local' or 'local/hac')
+        """
+        session = self.load_session(base_url, username, environment)
+        if session:
+            # Update last_used_at and save back
+            session_file = self._get_session_file(base_url, username, environment)
+            session.last_used_at = time.time()
+            try:
+                with session_file.open('w') as f:
+                    json.dump(asdict(session), f, indent=2)
+            except (IOError, OSError):
+                # Ignore errors - this is just for tracking
+                pass
+    
     def remove_session(self, base_url: str, username: str, environment: str) -> None:
         """Remove cached session.
         
