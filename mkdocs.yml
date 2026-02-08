@@ -1,8 +1,8 @@
 site_name: hac-client-core
 site_description: Python client library for the SAP Commerce HAC HTTP API
 site_url: https://sapcommercetools.github.io/hac-client-core/
-repo_url: https://github.com/SapCommerceTools/ha-client-core
-repo_name: SapCommerceTools/ha-client-core
+repo_url: https://github.com/SapCommerceTools/hac-client-core
+repo_name: SapCommerceTools/hac-client-core
 edit_uri: edit/main/docs/
 
 theme:
@@ -90,6 +90,6 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/SapCommerceTools/ha-client-core
+      link: https://github.com/SapCommerceTools/hac-client-core
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/hac-client-core/

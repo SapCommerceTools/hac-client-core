@@ -59,4 +59,4 @@ The client is structured around a few key design decisions:
 
 ## License
 
-[MIT](https://github.com/SapCommerceTools/ha-client-core/blob/main/LICENSE)
+[MIT](https://github.com/SapCommerceTools/hac-client-core/blob/main/LICENSE)

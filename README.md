@@ -30,13 +30,13 @@ pip install hac-client-core
 Or install directly from the repository:
 
 ```bash
-pip install git+https://github.com/SapCommerceTools/ha-client-core.git
+pip install git+https://github.com/SapCommerceTools/hac-client-core.git
 ```
 
 For development:
 
 ```bash
-git clone https://github.com/SapCommerceTools/ha-client-core.git
+git clone https://github.com/SapCommerceTools/hac-client-core.git
 cd hac-client-core
 pip install -e ".[dev]"
 ```

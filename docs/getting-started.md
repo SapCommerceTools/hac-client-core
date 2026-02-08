@@ -16,13 +16,13 @@
 === "Git"
 
     ```bash
-    pip install git+https://github.com/SapCommerceTools/ha-client-core.git
+    pip install git+https://github.com/SapCommerceTools/hac-client-core.git
     ```
 
 === "Development"
 
     ```bash
-    git clone https://github.com/SapCommerceTools/ha-client-core.git
+    git clone https://github.com/SapCommerceTools/hac-client-core.git
     cd ha-client-core
     pip install -e ".[dev]"
     ```
