@@ -39,28 +39,14 @@ See the [Getting started](getting-started.md) guide for installation instruction
 ## Architecture overview
 
 ```mermaid
-block-beta
-  columns 3
-
-  block:app:3
-    columns 3
-    A["Your code"]:3
-  end
-
-  block:client:3
-    columns 3
-    B["HacClient"]:3
-    C["Groovy"] D["FlexSearch"] E["Impex"]
-    F["HTTP layer"]:3
-    G["AuthHandler\n(pluggable)"] H["SessionManager\n(CSRF + cookie cache)"]:2
-  end
-
-  block:transport:3
-    columns 3
-    I["requests / urllib3"]:3
-  end
-
-  app --> client --> transport
+graph TD
+    A["Your code"] --> B["HacClient"]
+    B --> C["Groovy"]
+    B --> D["FlexSearch"]
+    B --> E["Impex"]
+    C & D & E --> F["HTTP layer"]
+    F --> G["AuthHandler\n(pluggable)"]
+    F --> H["SessionManager\n(CSRF + cookie cache)"]
 ```
 
 The client is structured around a few key design decisions:
