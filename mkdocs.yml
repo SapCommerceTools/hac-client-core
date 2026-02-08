@@ -1,0 +1,95 @@
+site_name: hac-client-core
+site_description: Python client library for the SAP Commerce HAC HTTP API
+site_url: https://sapcommercetools.github.io/hac-client-core/
+repo_url: https://github.com/SapCommerceTools/ha-client-core
+repo_name: SapCommerceTools/ha-client-core
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Usage:
+      - Groovy scripts: usage/groovy.md
+      - FlexibleSearch: usage/flexiblesearch.md
+      - Impex import: usage/impex.md
+      - System update: usage/system-update.md
+      - Session management: usage/sessions.md
+      - Custom authentication: usage/authentication.md
+  - API reference:
+      - HacClient: api/client.md
+      - Authentication: api/auth.md
+      - Result models: api/models.md
+      - Session management: api/sessions.md
+      - Exceptions: api/exceptions.md
+  - Security: security.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SapCommerceTools/ha-client-core
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/hac-client-core/

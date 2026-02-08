@@ -1,20 +1,30 @@
 """HAC HTTP client implementation."""
 
+from __future__ import annotations
+
+import json
+import sys
+import time
+import warnings
+from typing import Any, NoReturn, Optional, final
+from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-from typing import Optional
-from urllib.parse import urljoin
-import warnings
 
 from hac_client_core.auth import AuthHandler
 from hac_client_core.models import (
-    GroovyScriptResult,
     FlexibleSearchResult,
+    GroovyScriptResult,
     ImpexResult,
-    SessionInfo
+    ProjectData,
+    SessionInfo,
+    UpdateData,
+    UpdateLog,
+    UpdateParameter,
+    UpdateResult,
 )
 from hac_client_core.session import SessionManager
-
 
 # Suppress SSL warnings when ignore_ssl is enabled
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
@@ -22,12 +32,11 @@ warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 class HacClientError(Exception):
     """Base exception for HAC client errors."""
-    pass
 
 
+@final
 class HacAuthenticationError(HacClientError):
-    """Authentication failed."""
-    pass
+    """Authentication failed or session expired."""
 
 
 class HacClient:
@@ -82,24 +91,13 @@ class HacClient:
         self._setup_auth_interceptor()
     
     def _setup_auth_interceptor(self) -> None:
-        """Setup authentication interceptor for requests."""
-        # Store original request method
-        original_request = self.http_session.request
+        """Configure the HTTP session for the chosen auth handler.
         
-        def intercepted_request(*args, **kwargs):
-            """Intercept request to apply authentication."""
-            # Prepare the request
-            req = requests.Request(*args, **kwargs)
-            prepared = self.http_session.prepare_request(req)
-            
-            # Apply authentication
-            prepared = self.auth_handler.apply_auth(prepared)
-            
-            # Send the request
-            return original_request(*args, **kwargs)
-        
-        # Don't actually override - requests handles auth differently
-        # The auth is applied during login via form submission
+        Currently a no-op — authentication is applied during login via
+        form submission.  The hook exists so that custom ``AuthHandler``
+        subclasses can override it to install request-level interceptors
+        (e.g. injecting Bearer tokens on every request).
+        """
     
     def _extract_csrf_token(self, html: str) -> Optional[str]:
         """Extract CSRF token from HTML page.
@@ -252,7 +250,7 @@ class HacClient:
                 )
                 if self._validate_session():
                     if not self.quiet:
-                        print("Using cached session", file=__import__('sys').stderr)
+                        print("Using cached session", file=sys.stderr)
                     return
                 else:
                     # Cached session is invalid
@@ -346,7 +344,7 @@ class HacClient:
                 )
             
             if not self.quiet:
-                print("Authenticated successfully", file=__import__('sys').stderr)
+                print("Authenticated successfully", file=sys.stderr)
                 
         except requests.RequestException as e:
             raise HacAuthenticationError(f"Network error during authentication: {e}")
@@ -367,11 +365,11 @@ class HacClient:
                     self.environment
                 )
                 self.session_info = None
-            except Exception:
+            except (OSError, KeyError, TypeError):
                 # If we can't clear it, just continue
                 pass
     
-    def _handle_request_error(self, error: requests.RequestException, operation: str) -> None:
+    def _handle_request_error(self, error: requests.RequestException, operation: str) -> NoReturn:
         """Handle request errors and detect authentication failures.
         
         Args:
@@ -387,7 +385,7 @@ class HacClient:
                 self._clear_invalid_session()
                 raise HacAuthenticationError(
                     f"Session expired or invalid (HTTP {error.response.status_code}). "
-                    f"Please run: hac session start {self.environment}"
+                    f"Re-authenticate by calling login()."
                 )
         raise HacClientError(f"{operation}: {error}")
     
@@ -401,7 +399,7 @@ class HacClient:
                     username,
                     self.environment
                 )
-            except Exception:
+            except (OSError, KeyError, TypeError):
                 # Non-critical, ignore errors
                 pass
     
@@ -441,7 +439,6 @@ class HacClient:
             
             # Ensure cookies are set in http_session for automatic inclusion
             if self.session_info.session_id not in str(self.http_session.cookies):
-                from urllib.parse import urlparse
                 parsed = urlparse(self.base_url)
                 self.http_session.cookies.set('JSESSIONID', self.session_info.session_id, 
                                              domain=parsed.hostname, path='/')
@@ -542,13 +539,13 @@ class HacClient:
     def import_impex(
         self,
         impex_content: str,
-        validation_mode: str = "strict"
+        validation_mode: str = "import_strict"
     ) -> ImpexResult:
         """Import Impex data in HAC.
         
         Args:
             impex_content: Impex content to import
-            validation_mode: Validation mode (strict, relaxed, import_relaxed)
+            validation_mode: Validation mode (import_strict, import_relaxed, strict, relaxed)
             
         Returns:
             ImpexResult with import results
@@ -564,6 +561,7 @@ class HacClient:
             data = {
                 'scriptContent': impex_content,
                 'validationEnum': validation_mode.upper(),
+                'encoding': 'UTF-8',
                 'maxThreads': '1',
                 '_legacyMode': 'on',
                 '_enableCodeExecution': 'on'
@@ -604,4 +602,254 @@ class HacClient:
             
         except requests.RequestException as e:
             self._handle_request_error(e, "Failed to import Impex")
+    
+    def get_update_data(self) -> UpdateData:
+        """Fetch available update data (extensions, patches, parameters).
+        
+        Returns:
+            UpdateData with available extensions and their parameters
+            
+        Raises:
+            HacClientError: If fetching fails
+        """
+        self._ensure_authenticated()
+        
+        try:
+            # Must visit the update page first - server requires this to populate patch data
+            update_page_url = urljoin(self.base_url, '/hac/platform/update')
+            self.http_session.get(
+                update_page_url,
+                headers={'X-CSRF-TOKEN': self.session_info.csrf_token},
+                timeout=self.timeout
+            )
+            
+            url = urljoin(self.base_url, '/hac/platform/init/data/')
+            
+            headers = {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Referer': update_page_url
+            }
+            
+            response = self.http_session.get(
+                url,
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Parse project datas
+            project_datas = []
+            for pd in data.get('projectDatas', []):
+                params = []
+                for p in pd.get('parameter', []):
+                    params.append(UpdateParameter(
+                        name=p.get('name', ''),
+                        label=p.get('label', p.get('name', '')),
+                        values=p.get('values', {}),
+                        legacy=p.get('legacy', False),
+                        multi_select=p.get('multiSelect', False),
+                        default=p.get('default')
+                    ))
+                
+                project_datas.append(ProjectData(
+                    name=pd.get('name', ''),
+                    description=pd.get('description'),
+                    parameters=params
+                ))
+            
+            # Update session timestamp on successful use
+            self._touch_session()
+            
+            return UpdateData(
+                is_initializing=data.get('isInitializing', False),
+                project_datas=project_datas
+            )
+            
+        except requests.RequestException as e:
+            self._handle_request_error(e, "Failed to fetch update data")
+        except (KeyError, ValueError) as e:
+            raise HacClientError(f"Invalid response from HAC: {e}")
+    
+    def execute_update(
+        self,
+        patches: Optional[dict[str, str]] = None,
+        drop_tables: bool = False,
+        clear_hmc: bool = False,
+        create_essential_data: bool = False,
+        create_project_data: bool = False,
+        localize_types: bool = False,
+        all_parameters: Optional[dict[str, Any]] = None,
+        include_pending_patches: bool = True
+    ) -> UpdateResult:
+        """Execute system update.
+        
+        Args:
+            patches: Dictionary of patch names to values (e.g., {'Patch_MVP': 'yes'})
+            drop_tables: Drop all tables (DANGEROUS)
+            clear_hmc: Clear HMC configuration
+            create_essential_data: Create essential data
+            create_project_data: Create project data
+            localize_types: Localize types
+            all_parameters: Full parameters dict (overrides individual patch settings)
+            include_pending_patches: Include required system patches (validation, etc.)
+            
+        Returns:
+            UpdateResult with success status and log
+            
+        Raises:
+            HacClientError: If update execution fails
+        """
+        self._ensure_authenticated()
+        
+        try:
+            url = urljoin(self.base_url, '/hac/platform/init/execute')
+            
+            # Build parameters
+            if all_parameters is None:
+                all_parameters = {}
+            
+            # Add patch parameters
+            if patches:
+                for patch_name, value in patches.items():
+                    # Patches are typically prefixed with extension name
+                    all_parameters[patch_name] = [value]
+            
+            # Get pending system patches (validation, etc.)
+            pending_patches_payload: dict[str, list[str]] = {}
+            if include_pending_patches:
+                try:
+                    pending = self.get_pending_patches()
+                    for category, patch_list in pending.items():
+                        # Include all required patches, and optionally others
+                        hashes = [p['hash'] for p in patch_list if p.get('required', False)]
+                        if hashes:
+                            pending_patches_payload[category] = hashes
+                except (requests.RequestException, KeyError, ValueError):
+                    # Don't fail if we can't get pending patches
+                    pass
+            
+            # Build the request payload
+            payload = {
+                'dropTables': drop_tables,
+                'clearHMC': clear_hmc,
+                'createEssentialData': create_essential_data,
+                'createProjectData': create_project_data,
+                'localizeTypes': localize_types,
+                'initMethod': None,
+                'allParameters': all_parameters,
+                'patches': pending_patches_payload,
+                'parametersAsStringMap': {
+                    'initmethod': ['update'],
+                    **{k: v if isinstance(v, list) else [v] for k, v in all_parameters.items()}
+                }
+            }
+            
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json; charset=UTF-8',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+            
+            response = self.http_session.post(
+                url,
+                data=json.dumps(payload),
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Update session timestamp on successful use
+            self._touch_session()
+            
+            return UpdateResult(
+                success=result.get('success', False),
+                log_html=result.get('log', '')
+            )
+            
+        except requests.RequestException as e:
+            self._handle_request_error(e, "Failed to execute update")
+        except (KeyError, ValueError) as e:
+            raise HacClientError(f"Invalid response from HAC: {e}")
+    
+    def get_pending_patches(self) -> dict[str, list[dict[str, Any]]]:
+        """Fetch pending system patches that need to be included in updates.
+        
+        Returns:
+            Dictionary mapping patch category to list of patches with hashes
+            
+        Raises:
+            HacClientError: If fetching fails
+        """
+        self._ensure_authenticated()
+        
+        try:
+            url = urljoin(self.base_url, '/hac/platform/init/pendingPatches')
+            
+            headers = {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+            
+            response = self.http_session.get(
+                url,
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            return response.json()
+            
+        except requests.RequestException as e:
+            self._handle_request_error(e, "Failed to fetch pending patches")
+        except (KeyError, ValueError) as e:
+            raise HacClientError(f"Invalid response from HAC: {e}")
+    
+    def get_update_log(self) -> UpdateLog:
+        """Fetch the current update/initialization log.
+        
+        Returns:
+            UpdateLog with current log content
+            
+        Raises:
+            HacClientError: If fetching log fails
+        """
+        self._ensure_authenticated()
+        
+        try:
+            url = urljoin(self.base_url, f'/hac/initlog/log?_={int(time.time() * 1000)}')
+            
+            headers = {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': self.session_info.csrf_token,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+            
+            response = self.http_session.get(
+                url,
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Update session timestamp on successful use
+            self._touch_session()
+            
+            return UpdateLog(
+                log_html=data.get('log', '')
+            )
+            
+        except requests.RequestException as e:
+            self._handle_request_error(e, "Failed to fetch update log")
+        except (KeyError, ValueError) as e:
+            raise HacClientError(f"Invalid response from HAC: {e}")
 

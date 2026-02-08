@@ -5,13 +5,75 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hac-client-core"
 version = "0.1.0"
-description = "Core library for SAP Commerce HAC (Hybris Administration Console) HTTP API"
+description = "Python client library for the SAP Commerce HAC (Hybris Administration Console) HTTP API"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
+authors = [
+    {name = "SapCommerceTools"},
+]
+keywords = [
+    "sap",
+    "commerce",
+    "hybris",
+    "hac",
+    "administration",
+    "groovy",
+    "flexiblesearch",
+    "impex",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
 ]
 
-[project.scripts]
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "responses>=0.23.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+docs = [
+    "mkdocs-material>=9.5",
+]
 
+[project.urls]
+Homepage = "https://github.com/SapCommerceTools/ha-client-core"
+Documentation = "https://sapcommercetools.github.io/hac-client-core/"
+Repository = "https://github.com/SapCommerceTools/ha-client-core"
+Issues = "https://github.com/SapCommerceTools/ha-client-core/issues"
+Changelog = "https://github.com/SapCommerceTools/ha-client-core/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hac_client_core = ["py.typed"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

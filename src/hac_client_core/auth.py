@@ -1,7 +1,16 @@
-"""Authentication abstraction for HAC client."""
+"""Authentication abstraction for HAC client.
+
+Provides a pluggable interface for authenticating HTTP requests to the
+SAP Commerce HAC.  Ship with :class:`BasicAuthHandler` for form-based
+login.  Extend :class:`AuthHandler` for OAuth, JWT, API-key, or any
+other scheme.
+"""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import final
+
 import requests
 
 
@@ -17,27 +26,29 @@ class AuthHandler(ABC):
         """Apply authentication to a prepared request.
         
         Args:
-            request: The prepared HTTP request
+            request: The prepared HTTP request.
             
         Returns:
-            The modified request with authentication applied
+            The modified request with authentication applied.
         """
-        pass
-    
+
     @abstractmethod
-    def get_initial_credentials(self) -> Dict[str, str]:
+    def get_initial_credentials(self) -> dict[str, str]:
         """Get credentials for initial login form.
         
         Returns:
-            Dictionary with credentials (e.g., {'j_username': 'admin', 'j_password': 'nimda'})
+            Dictionary with credentials
+            (e.g. ``{'j_username': 'admin', 'j_password': 'nimda'}``).
         """
-        pass
 
 
+@final
 class BasicAuthHandler(AuthHandler):
-    """HTTP Basic Authentication handler.
+    """Form-based authentication handler for Spring Security.
     
-    Security: Password reference is cleared from memory when handler is destroyed.
+    Provides ``j_username`` / ``j_password`` credentials for the HAC login
+    form.  The password reference is cleared from memory when the handler
+    is garbage-collected.
     """
     
     def __init__(self, username: str, password: str):
@@ -54,11 +65,11 @@ class BasicAuthHandler(AuthHandler):
         """Apply HTTP Basic Authentication."""
         return request
     
-    def get_initial_credentials(self) -> Dict[str, str]:
+    def get_initial_credentials(self) -> dict[str, str]:
         """Get credentials for Spring Security form login.
         
-        Returns credential dictionary. Can be called multiple times if needed
-        (e.g., retries, multiple authentication attempts).
+        Returns credential dictionary.  Can be called multiple times
+        (e.g. retries, re-authentication after session expiry).
         """
         return {
             'j_username': self.username,

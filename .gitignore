@@ -1,10 +1,38 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Distribution / packaging
 *.egg-info/
+*.egg
 dist/
 build/
-.cache/
+wheels/
 
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Cache
+.cache/
+.ruff_cache/
+
+# Docs build output
+site/

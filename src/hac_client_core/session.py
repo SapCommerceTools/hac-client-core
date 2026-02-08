@@ -1,12 +1,19 @@
-"""Session management for HAC client."""
+"""Session management for HAC client.
 
-import json
+Sessions are persisted as JSON files under ``~/.cache/hac-client/`` (by
+default).  Each session is keyed by ``(base_url, username, environment)``
+and contains only session IDs and CSRF tokens — never passwords.
+"""
+
+from __future__ import annotations
+
 import hashlib
+import json
 import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from typing import Optional, final
 
 
 @dataclass
@@ -61,6 +68,7 @@ class SessionMetadata:
         return datetime.fromtimestamp(self.last_used_at).strftime("%Y-%m-%d %H:%M:%S")
 
 
+@final
 class SessionManager:
     """Manage HAC session persistence and caching."""
     
@@ -190,7 +198,7 @@ class SessionManager:
         session_file = self._get_session_file(base_url, username, environment)
         session_file.unlink(missing_ok=True)
     
-    def list_sessions(self) -> List[SessionMetadata]:
+    def list_sessions(self) -> list[SessionMetadata]:
         """List all cached sessions.
         
         Returns:
