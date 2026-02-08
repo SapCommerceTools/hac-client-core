@@ -45,8 +45,10 @@ graph TD
     B --> D["FlexSearch"]
     B --> E["Impex"]
     C & D & E --> F["HTTP layer"]
-    F --> G["AuthHandler\n(pluggable)"]
-    F --> H["SessionManager\n(CSRF + cookie cache)"]
+    F --> G["AuthHandler
+    (pluggable)"]
+    F --> H["SessionManager
+    (CSRF + cookie cache)"]
 ```
 
 The client is structured around a few key design decisions:
