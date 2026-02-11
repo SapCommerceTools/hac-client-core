@@ -582,14 +582,34 @@ class HacClient:
             
             # Parse HTML response (Impex doesn't return JSON)
             soup = BeautifulSoup(response.text, 'html.parser')
-            result_div = soup.find('div', {'class': 'impex-result'})
             
+            # The result span carries data-level (error/success) and data-result (summary)
+            result_span = soup.find('span', id='impexResult')
+            
+            if result_span is None:
+                raise HacClientError("Failed to parse Impex import response from HAC")
+            
+            level = result_span.get('data-level', '')
+            summary = result_span.get('data-result', '')
+            success = level != 'error'
+            
+            # Detailed output lives in <div class="impexResult"><pre>...</pre></div>
+            result_div = soup.find('div', class_='impexResult')
             if result_div:
-                output = result_div.get_text(strip=True)
-                success = 'error' not in output.lower()
+                pre = result_div.find('pre')
+                detail = pre.get_text().strip() if pre else ''
             else:
-                output = response.text
-                success = response.status_code == 200
+                detail = ''
+            
+            output = detail if detail else summary
+            
+            # Collect individual validation/error lines
+            validation_errors: list[str] = []
+            if not success and detail:
+                for line in detail.splitlines():
+                    line = line.strip()
+                    if line:
+                        validation_errors.append(line)
             
             # Update session timestamp on successful use
             self._touch_session()
@@ -597,7 +617,8 @@ class HacClient:
             return ImpexResult(
                 success=success,
                 output=output,
-                error=None if success else output
+                error=summary if not success else None,
+                validation_errors=validation_errors
             )
             
         except requests.RequestException as e:
