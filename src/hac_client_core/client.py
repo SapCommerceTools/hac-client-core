@@ -296,22 +296,46 @@ class HacClient:
                 data=login_data,
                 cookies=cookies,
                 timeout=self.timeout,
-                allow_redirects=True
+                allow_redirects=False
             )
-            
-            # Check if login was successful
-            if response.status_code != 200 or 'j_spring_security_check' in response.text:
-                raise HacAuthenticationError("Authentication failed - invalid credentials")
-            
-            # Extract session info from auth response
-            # The session cookies are automatically stored in http_session.cookies
-            session_id = self.http_session.cookies.get('JSESSIONID') or session_id
-            route = self.http_session.cookies.get('ROUTE')
-            route_cookie = f"ROUTE={route}" if route else route_cookie
-            
-            # Extract updated CSRF token from authenticated page
-            new_csrf_token = self._extract_csrf_token(response.text)
-            csrf_token = new_csrf_token or csrf_token
+
+            # Spring Security returns 302 on successful login.
+            # We must NOT follow the redirect automatically — requests would
+            # re-POST to the redirect target, which returns 405.
+            if response.status_code == 302:
+                # Session cookies are already stored by requests.Session
+                session_id = self.http_session.cookies.get('JSESSIONID') or session_id
+                route = self.http_session.cookies.get('ROUTE')
+                route_cookie = f"ROUTE={route}" if route else route_cookie
+
+                # Follow redirect with GET to get the authenticated page (for CSRF token)
+                redirect_url = response.headers.get('Location', urljoin(self.base_url, '/hac/'))
+                if not redirect_url.startswith('http'):
+                    redirect_url = urljoin(self.base_url, redirect_url)
+
+                page_response = self.http_session.get(redirect_url, timeout=self.timeout)
+
+                # If we got redirected back to login, credentials were wrong
+                if 'j_spring_security_check' in page_response.text:
+                    raise HacAuthenticationError("Authentication failed - invalid credentials")
+
+                new_csrf_token = self._extract_csrf_token(page_response.text)
+                csrf_token = new_csrf_token or csrf_token
+            elif response.status_code == 200:
+                # Some HAC versions may not redirect
+                if 'j_spring_security_check' in response.text:
+                    raise HacAuthenticationError("Authentication failed - invalid credentials")
+
+                session_id = self.http_session.cookies.get('JSESSIONID') or session_id
+                route = self.http_session.cookies.get('ROUTE')
+                route_cookie = f"ROUTE={route}" if route else route_cookie
+
+                new_csrf_token = self._extract_csrf_token(response.text)
+                csrf_token = new_csrf_token or csrf_token
+            else:
+                raise HacAuthenticationError(
+                    f"Authentication failed - unexpected status {response.status_code}"
+                )
             
             if not session_id or not csrf_token:
                 missing = []
@@ -381,7 +405,7 @@ class HacClient:
             HacClientError: For other errors
         """
         if isinstance(error, requests.HTTPError) and error.response is not None:
-            if error.response.status_code in (401, 403, 405):
+            if error.response.status_code in (401, 403):
                 self._clear_invalid_session()
                 raise HacAuthenticationError(
                     f"Session expired or invalid (HTTP {error.response.status_code}). "
