@@ -462,14 +462,13 @@ class HacClient:
             }
             
             # Ensure cookies are set in http_session for automatic inclusion
+            # Note: don't pass domain= — requests won't send cookies for bare
+            # hostnames (e.g. "commerce-server") due to domain-matching rules
             if self.session_info.session_id not in str(self.http_session.cookies):
-                parsed = urlparse(self.base_url)
-                self.http_session.cookies.set('JSESSIONID', self.session_info.session_id, 
-                                             domain=parsed.hostname, path='/')
+                self.http_session.cookies.set('JSESSIONID', self.session_info.session_id)
                 if self.session_info.route_cookie:
                     route_value = self.session_info.route_cookie.replace('ROUTE=', '')
-                    self.http_session.cookies.set('ROUTE', route_value,
-                                                 domain=parsed.hostname, path='/')
+                    self.http_session.cookies.set('ROUTE', route_value)
             
             response = self.http_session.post(
                 url,

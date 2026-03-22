@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hac-client-core"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python client library for the SAP Commerce HAC (Hybris Administration Console) HTTP API"
 readme = "README.md"
 license = "MIT"
