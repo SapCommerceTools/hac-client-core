@@ -727,7 +727,8 @@ class HacClient:
         create_project_data: bool = False,
         localize_types: bool = False,
         all_parameters: Optional[dict[str, Any]] = None,
-        include_pending_patches: bool = True
+        include_pending_patches: bool = True,
+        run_schema_update: bool = False
     ) -> UpdateResult:
         """Execute system update.
         
@@ -740,6 +741,8 @@ class HacClient:
             localize_types: Localize types
             all_parameters: Full parameters dict (overrides individual patch settings)
             include_pending_patches: Include required system patches (validation, etc.)
+            run_schema_update: Run the type-system schema update (DDL). When False,
+                only project data / clearHMC / localizeTypes / patches run.
             
         Returns:
             UpdateResult with success status and log
@@ -783,7 +786,7 @@ class HacClient:
                 'createEssentialData': create_essential_data,
                 'createProjectData': create_project_data,
                 'localizeTypes': localize_types,
-                'initMethod': None,
+                'initMethod': 'UPDATE' if run_schema_update else None,
                 'allParameters': all_parameters,
                 'patches': pending_patches_payload,
                 'parametersAsStringMap': {
