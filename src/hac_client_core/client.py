@@ -667,7 +667,7 @@ class HacClient:
                 timeout=self.timeout
             )
             
-            url = urljoin(self.base_url, '/hac/platform/init/data/')
+            url = urljoin(self.base_url, '/hac/platform/init/data')
             
             headers = {
                 'Accept': 'application/json',
